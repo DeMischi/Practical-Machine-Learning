@@ -1,0 +1,126 @@
+---
+title: "Practical Machine Learning"
+author: "Michael Lichtsinn"
+date: "25. September 2015"
+output: html_document
+---
+# About this project #
+
+This is a project done for the Coursera course "Practical Machine Learning"" by Jeff Leek, PhD, Roger D. Peng, PhD, Brian Caffo, PhD from the Johns Hopkins Bloomberg School of Public Health.
+
+## Goal of this project ##
+
+The goal of this project is to deploy a machine learning algorithm to a data set to correctly predicting the manner in which participants did an exercise through data from activity monitors.
+
+## Background for the data ##
+
+>Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset). 
+
+##Data##
+The training data used for this project can be downloaded here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+You can download the test data here: 
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har
+
+**Full citation**
+
+>Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
+
+# Load librarys and data #
+
+## Loading librarys ##
+```{r}
+library(caret)
+library(randomForest)
+```
+
+## Loading data ##
+
+```{r, cache=TRUE}
+#loading downloaded data from HDD 
+training_data <- read.csv("D:/R/predmachlearn-032/pml-training.csv", na.strings=c("NA","#DIV/0!",""))
+testing_data <- read.csv("D:/R/predmachlearn-032/pml-testing.csv", na.strings=c("NA","#DIV/0!",""))
+```
+
+```{r, cache=TRUE}
+#Seeting seed for reproducability
+set.seed(1111)
+```
+
+```{r, cache=TRUE}
+#how many variables are in the data?
+dim(training_data)
+```
+
+```{r,  results='hide'}
+#get basic information about the data
+str(training_data)
+#results are hidden, because they take too much space
+```
+160 variables are way too much. But the str() function showed, that there are many variables with NA. Getting rid of them is part of the datacleaning.
+
+## Datacleaning & Datasclicing ##
+
+The first 6 variables does not conatin useful informations, since they contain an index, user names, timestamps etc. Let's drop them!
+
+```{r, cache=TRUE}
+training_data <- training_data[,-c(1,2,3,4,5,6)]
+testing_data <- testing_data[,-c(1,2,3,4,5,6)]
+```
+
+After that, we want to get rid of those columns that are na.
+
+```{r, cache=TRUE}
+training_data_clean <- training_data[, colSums(is.na(training_data)) == 0] 
+testing_data_clean <- testing_data[, colSums(is.na(testing_data)) == 0] 
+
+dim(training_data_clean)
+dim(testing_data_clean)
+```
+
+Now the datasets have only 54 variables left. Nice! Now split the training data for cross-validation purposes.
+
+```{r, cache=TRUE}
+# Slicing the data into seperate datasets as I need them later for the validation.
+
+inTrain <- createDataPartition(training_data_clean$classe, p=0.60, list=F)
+training_data_clean_final <- training_data_clean[inTrain, ]
+validation_data_clean_final <- training_data_clean[-inTrain, ]
+
+dim(training_data_clean_final)
+dim(validation_data_clean_final)
+```
+
+That's it for the datacleaning and slicing part. Up next: Training the model.
+
+# Training the machine learning model #
+
+For this project, we will use a random forest model. Let's build it!
+
+```{r, cache=TRUE}
+#fitting the model on the cleaned data
+modelFit = randomForest(classe ~., data=training_data_clean_final)
+
+```
+
+That was easy! Now we want to check the accuracy with our validation test set.
+
+```{r, cache=TRUE}
+predictions_validationset <- predict(modelFit, newdata=validation_data_clean_final)
+confusionMatrix(predictions_validationset, validation_data_clean_final$classe)
+```
+
+An accuracy of our model is whooping 99.99% on the validation test set. That means, our out of sample error is 0.01%. The random forest model did a tremendous job! But what about the testdata?
+
+# Predicting the classes for the testset #
+
+Let's use the model to predict the classes of the exercises. Loading up the predictions on coursera, it turns out they are all correct!
+
+That's it! We have successfully cleaned the data, deployed an machine learning algorithm, checked the accuracy via cross-validation and finally predicted the classes for the test set.
+
+Thanks for reading and have a nice machine learning infused day!
